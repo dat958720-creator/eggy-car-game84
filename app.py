@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car",
+    page_title="Eggy Car - Fast & Furious",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Game Lái Xe Chở Trứng")
+st.title("🥚 Eggy Car - Tốc Độ Cao & Vật Lý Rơi Trứng")
 st.markdown("""
-* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trái (👈) / A** để lùi và phanh.
-* Giữ cân bằng để quả trứng không bị nghiêng đổ khỏi giỏ xe!
+* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến nhanh, **Mũi tên Trải (👈) / A** để lùi và phanh.
+* **Luật chơi mới**: Xe phóng cực nhanh, **chỉ khi quả trứng lật úp hoặc rơi xuống đất mới thua**!
 """)
 
 eggy_car_html = """
@@ -33,7 +33,7 @@ eggy_car_html = """
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
 
-        // --- HỆ THỐNG ÂM THANH (WEB AUDIO API) ---
+        // --- ÂM THANH WEB AUDIO API ---
         let audioCtx = null;
         function initAudio() {
             if (!audioCtx) {
@@ -47,14 +47,14 @@ eggy_car_html = """
                 let osc = audioCtx.createOscillator();
                 let gain = audioCtx.createGain();
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(45, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(70, audioCtx.currentTime + 0.06);
-                gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+                osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(95, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.025, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.08);
+                osc.stop(audioCtx.currentTime + 0.07);
             } catch(e) {}
         }
 
@@ -64,14 +64,14 @@ eggy_car_html = """
                 let osc = audioCtx.createOscillator();
                 let gain = audioCtx.createGain();
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(250, audioCtx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.25);
-                gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+                osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
                 osc.connect(gain);
                 gain.connect(audioCtx.destination);
                 osc.start();
-                osc.stop(audioCtx.currentTime + 0.25);
+                osc.stop(audioCtx.currentTime + 0.3);
             } catch(e) {}
         }
 
@@ -80,8 +80,9 @@ eggy_car_html = """
         let gameOver = false;
         let keys = {};
 
-        let car = { x: 150, y: 220, vx: 0, ax: 0.12, maxSpeed: 5.5, wheelAngle: 0 };
-        let egg = { x: 150, y: 175, angle: 0, angularVel: 0 };
+        // TĂNG TỐC ĐỘ XE: Tăng maxSpeed và gia tốc ax
+        let car = { x: 150, y: 220, vx: 0, ax: 0.28, maxSpeed: 9.5, wheelAngle: 0 };
+        let egg = { x: 150, y: 175, angle: 0, angularVel: 0, py: 0, isFalling: false };
 
         document.addEventListener("keydown", (e) => {
             initAudio();
@@ -97,6 +98,8 @@ eggy_car_html = """
             car.wheelAngle = 0;
             egg.angle = 0;
             egg.angularVel = 0;
+            egg.py = 0;
+            egg.isFalling = false;
         }
 
         // Tương tác bấm nút trên màn hình Game Over
@@ -106,19 +109,14 @@ eggy_car_html = """
             const mouseY = event.clientY - rect.top;
 
             if (gameOver) {
-                // Nút WATCH AD / RESUME
                 if (mouseX >= canvas.width/2 - 100 && mouseX <= canvas.width/2 + 100 && mouseY >= 180 && mouseY <= 220) {
-                    gameOver = false;
-                    egg.angle = 0;
-                    egg.angularVel = 0;
+                    resetGame(); // Resume / Chơi tiếp
                 }
-                // Nút REPLAY
                 else if (mouseX >= canvas.width/2 - 100 && mouseX <= canvas.width/2 + 100 && mouseY >= 235 && mouseY <= 275) {
-                    resetGame();
+                    resetGame(); // Replay
                 }
-                // Nút HOME
                 else if (mouseX >= canvas.width/2 - 100 && mouseX <= canvas.width/2 + 100 && mouseY >= 290 && mouseY <= 330) {
-                    resetGame();
+                    resetGame(); // Home
                 }
             }
         });
@@ -135,10 +133,10 @@ eggy_car_html = """
                 car.vx = Math.min(car.vx + car.ax, car.maxSpeed);
                 moving = true;
             } else if (keys["ArrowLeft"] || keys["a"] || keys["A"]) {
-                car.vx = Math.max(car.vx - car.ax, -car.maxSpeed / 2);
+                car.vx = Math.max(car.vx - car.ax, -car.maxSpeed / 1.5);
                 moving = true;
             } else {
-                car.vx *= 0.96; // Lực ma sát nhẹ
+                car.vx *= 0.97; // Ma sát nhẹ để xe trớn xa hơn
             }
 
             if (moving) playEngineSound();
@@ -146,16 +144,28 @@ eggy_car_html = """
             if (car.vx > 0) distance += car.vx * 0.05;
             car.wheelAngle += car.vx * 0.1;
 
-            // Vật lý giữ trứng an toàn (có lực hút đàn hồi về tâm giỏ xe)
-            egg.angularVel += (-car.vx * 0.012); 
-            egg.angularVel -= egg.angle * 0.025; // Lực đàn hồi giữ trứng đứng thẳng
-            egg.angularVel *= 0.92; // Giảm xóc
-            egg.angle += egg.angularVel;
+            let groundY = getGroundY(200);
 
-            // Giới hạn điểm rơi trứng (nghiêng quá 75 độ mới rơi/vỡ)
-            if (Math.abs(egg.angle) > 1.3) {
-                gameOver = true;
-                playEggCrackSound();
+            // Xử lý vật lý khi trứng rơi ra khỏi xe
+            if (egg.isFalling) {
+                egg.py += 6; // Tốc độ rơi xuống đất
+                egg.angle += 0.1; // Xoay vòng khi rơi
+                // Khi chạm mặt đường đất
+                if (car.y + egg.py >= groundY + 15) {
+                    gameOver = true;
+                    playEggCrackSound();
+                }
+            } else {
+                // Quán tính lắc lư của trứng trên xe (Tốc độ cao khiến trứng dễ văng hơn)
+                egg.angularVel += (-car.vx * 0.018); 
+                egg.angularVel -= egg.angle * 0.015; 
+                egg.angularVel *= 0.93; 
+                egg.angle += egg.angularVel;
+
+                // CHỈ KHI TRỨNG NGHIÊNG QUÁ GÓC (LẬT ÚP) HOẶC RƠI KHỎI GIỎ THÌ MỚI BẮT ĐẦU RƠI XUỐNG ĐẤT
+                if (Math.abs(egg.angle) > 2.0) {
+                    egg.isFalling = true;
+                }
             }
         }
 
@@ -185,7 +195,7 @@ eggy_car_html = """
             ctx.lineTo(0, 350);
             ctx.fill();
 
-            // 3. Cây Cối Hoạt Hình
+            // 3. Cây Cối
             function drawTree(tx, ty) {
                 ctx.fillStyle = "#1e8449";
                 ctx.beginPath();
@@ -200,7 +210,7 @@ eggy_car_html = """
             drawTree(280, 220);
             drawTree(600, 210);
 
-            // 4. Mặt Đường Nhựa Trắng Xám & Lòng Đất Đỏ Nâu
+            // 4. Mặt Đường & Lòng Đất
             let groundY = getGroundY(200);
 
             ctx.fillStyle = "#e5e8e8";
@@ -220,10 +230,10 @@ eggy_car_html = """
                 ctx.fill();
             }
 
-            let screenX = 220; // Vị trí xe cố định trên màn hình
+            let screenX = 220; 
             car.y = groundY;
 
-            // 5. Xe Jeep Đỏ & Thanh Giỏ Giữ Trứng
+            // 5. Xe Jeep Đỏ & Thanh Giỏ Trứng
             ctx.strokeStyle = "#17202a";
             ctx.lineWidth = 5;
             ctx.beginPath();
@@ -231,19 +241,16 @@ eggy_car_html = """
             ctx.moveTo(screenX + 22, car.y - 10); ctx.lineTo(screenX + 22, car.y - 38);
             ctx.stroke();
 
-            // Thân Xe
             ctx.fillStyle = "#e74c3c";
             ctx.beginPath();
             ctx.roundRect(screenX - 42, car.y - 12, 84, 26, 6);
             ctx.fill();
 
-            // Đèn Xe
             ctx.fillStyle = "#f1c40f";
             ctx.beginPath();
             ctx.arc(screenX + 38, car.y - 2, 4.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Số mét hiển thị trên thân xe (Giống ảnh mẫu 6m)
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 15px Arial";
             ctx.textAlign = "center";
@@ -269,7 +276,7 @@ eggy_car_html = """
 
             // 7. Quả Trứng
             ctx.save();
-            ctx.translate(screenX, car.y - 32);
+            ctx.translate(screenX, car.y - 32 + egg.py);
             ctx.rotate(egg.angle);
 
             if (!gameOver) {
@@ -281,20 +288,25 @@ eggy_car_html = """
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
 
-                // Điểm sáng trên vỏ trứng
                 ctx.fillStyle = "rgba(255,255,255,0.8)";
                 ctx.beginPath();
                 ctx.ellipse(-3, -7, 3, 5, -0.3, 0, Math.PI * 2);
                 ctx.fill();
             } else {
+                // Trứng vỡ bẹp trên mặt đất
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
-                ctx.arc(0, 2, 10, 0, Math.PI * 2);
+                ctx.ellipse(0, 5, 14, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = "#ffffff";
+                ctx.beginPath();
+                ctx.arc(-4, 3, 3, 0, Math.PI * 2);
+                ctx.arc(6, 4, 2.5, 0, Math.PI * 2);
                 ctx.fill();
             }
             ctx.restore();
 
-            // 8. Màn hình Game Over "Get another chance" chuẩn ảnh mẫu
+            // 8. Màn hình Game Over "Get another chance"[cite: 1]
             if (gameOver) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.65)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -307,7 +319,7 @@ eggy_car_html = """
                 ctx.fillText("Get another chance", canvas.width / 2, 120);
                 ctx.shadowBlur = 0;
 
-                // Nút 1: WATCH AD TO RESUME (Màu Cam)
+                // Nút 1: WATCH AD TO RESUME
                 ctx.fillStyle = "#f39c12";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 100, 180, 200, 40, 20);
@@ -319,7 +331,7 @@ eggy_car_html = """
                 ctx.font = "bold 13px Arial";
                 ctx.fillText("📹 WATCH AD TO RESUME", canvas.width / 2, 205);
 
-                // Nút 2: REPLAY (Màu Vàng)
+                // Nút 2: REPLAY
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 100, 235, 200, 40, 20);
@@ -331,7 +343,7 @@ eggy_car_html = """
                 ctx.font = "bold 15px Arial";
                 ctx.fillText("🔄 REPLAY", canvas.width / 2, 260);
 
-                // Nút 3: HOME (Màu Xanh Lá)
+                // Nút 3: HOME
                 ctx.fillStyle = "#2ecc71";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 100, 290, 200, 40, 20);
