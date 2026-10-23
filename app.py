@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Chỉ Thua Khi Trứng Chạm Đất",
+    page_title="Eggy Car - Dốc Gồ Ghề & Rơi Trứng",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Rớt Xuống Đất Mới Thua")
+st.title("🥚 Eggy Car - Đường Gồ Ghề Thử Thách Trứng")
 st.markdown("""
-* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trái (👈) / A** để lùi.
-* **Luật chơi**: Quả trứng văng khỏi xe cứ để nó bay, **chừng nào nó rơi chạm xuống mặt đất** thì game mới thực sự thua!
+* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tăng tốc, **Mũi tên Trải (👈) / A** để lùi/phanh.
+* **Luật chơi**: Địa hình gồ ghề nhấp nhô liên tục! Quả trứng nảy văng khỏi xe và **rơi xuống chạm đất mới thực sự thua**!
 """)
 
 eggy_car_html = """
@@ -81,7 +81,6 @@ eggy_car_html = """
         let keys = {};
 
         let car = { x: 150, y: 220, vx: 0, ax: 0.28, maxSpeed: 9.5, wheelAngle: 0 };
-        // Quản lý vị trí quả trứng (worldX và worldY để khi văng ra nó rơi theo không gian thực)
         let egg = { worldX: 150, yOff: -32, vx: 0, vy: 0, angle: 0, angularVel: 0, isDropped: false };
 
         document.addEventListener("keydown", (e) => {
@@ -124,8 +123,9 @@ eggy_car_html = """
             }
         });
 
+        // ĐỊA HÌNH GỒ GHỀ: Kết hợp nhiều hàm sóng sin với tần số khác nhau để tạo ra các đoạn dốc nhấp nhô, gồ ghề liên tục
         function getGroundY(x) {
-            return 240 + Math.sin(x * 0.008) * 15 + Math.cos(x * 0.02) * 5;
+            return 250 + Math.sin(x * 0.01) * 30 + Math.sin(x * 0.03) * 15 + Math.cos(x * 0.07) * 8;
         }
 
         function update() {
@@ -152,32 +152,35 @@ eggy_car_html = """
             car.y = getGroundY(currentCarWorldX);
 
             if (egg.isDropped) {
-                // Trứng rơi tự do theo trọng lực
-                egg.vy += 0.55; // Trọng lực kéo xuống
+                // Trứng rơi tự do khi đã văng ra khỏi xe
+                egg.vy += 0.55; 
                 egg.yOff += egg.vy;
                 egg.worldX += egg.vx;
                 egg.angle += egg.angularVel;
 
                 let groundAtEgg = getGroundY(egg.worldX);
 
-                // CHỈ KHI TRỨNG RƠI CHẠM ĐẤT THÌ MỚI GAME OVER THẬT SỰ
+                // CHỈ KHI TRỨNG RƠI CHẠM ĐẤT THÌ MỚI THUA
                 if (car.y + egg.yOff >= groundAtEgg) {
                     gameOver = true;
                     playEggCrackSound();
                 }
             } else {
-                // Trứng nằm trên xe
+                // Trứng nằm trên xe chịu tác động từ độ gồ ghề của dốc
                 egg.worldX = currentCarWorldX;
-                egg.angularVel += (-car.vx * 0.018); 
-                egg.angularVel -= egg.angle * 0.015; 
-                egg.angularVel *= 0.93; 
+                
+                // Độ gồ ghề của mặt đường làm trứng nảy lắc mạnh hơn
+                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.05;
+                egg.angularVel += (-car.vx * 0.022) - slopeEffect; 
+                egg.angularVel -= egg.angle * 0.012; 
+                egg.angularVel *= 0.92; 
                 egg.angle += egg.angularVel;
 
-                // Nếu lắc lư quá đà (nghiêng quá 2.2), trứng văng ra khỏi giỏ xe
-                if (Math.abs(egg.angle) > 2.2) {
+                // KHI XE QUA DỐC GỒ GHỀ, TRỨNG BỊ NẢY VĂNG RA KHỎI XE
+                if (Math.abs(egg.angle) > 1.8) {
                     egg.isDropped = true;
-                    egg.vy = -3.0; // Bật văng lên không trung trước khi rơi
-                    egg.vx = car.vx * 0.8; // Bay theo đà quán tính của xe
+                    egg.vy = -4.5; // Nảy văng mạnh lên không trung
+                    egg.vx = car.vx * 0.9; // Văng theo đà tốc độ của xe
                 }
             }
         }
@@ -204,8 +207,8 @@ eggy_car_html = """
             ctx.lineTo(500, 120);
             ctx.lineTo(680, 260);
             ctx.lineTo(750, 180);
-            ctx.lineTo(750, 350);
-            ctx.lineTo(0, 350);
+            ctx.lineTo(750, 380);
+            ctx.lineTo(0, 380);
             ctx.fill();
 
             // 3. Cây Cối
@@ -219,32 +222,41 @@ eggy_car_html = """
                 ctx.fillStyle = "#7e5109";
                 ctx.fillRect(tx - 3, ty, 6, 12);
             }
-            drawTree(100, 230);
-            drawTree(280, 220);
-            drawTree(600, 210);
+            drawTree(100, 240);
+            drawTree(300, 230);
+            drawTree(580, 220);
 
-            // 4. Mặt Đường & Lòng Đất
+            // 4. Vẽ Mặt Đường Gồ Ghề & Lòng Đất chạy theo hàm getGroundY
             let screenX = 220;
-            let groundY = car.y;
 
-            ctx.fillStyle = "#e5e8e8";
-            ctx.fillRect(0, groundY + 20, canvas.width, 16);
-
-            ctx.fillStyle = "#b03a2e";
-            ctx.fillRect(0, groundY + 36, canvas.width, 180);
-
-            // Hạt Đốm Đất Đỏ
-            ctx.fillStyle = "#78281f";
-            for (let i = 20; i < canvas.width; i += 50) {
-                let shift = (distance * 15) % 50;
-                ctx.beginPath();
-                ctx.arc(i - shift, groundY + 60, 3.5, 0, Math.PI * 2);
-                ctx.arc(i + 20 - shift, groundY + 90, 4, 0, Math.PI * 2);
-                ctx.arc(i + 35 - shift, groundY + 120, 3, 0, Math.PI * 2);
-                ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            for (let px = 0; px <= canvas.width; px += 10) {
+                let worldXCoord = px + distance;
+                let gy = getGroundY(worldXCoord);
+                ctx.lineTo(px, gy);
             }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fillStyle = "#b03a2e"; // Đất đỏ bên dưới
+            ctx.fill();
 
-            // 5. Xe Jeep Đỏ & Thanh Giỏ Trứng
+            // Lớp đường nhựa phía trên gồ ghề
+            ctx.beginPath();
+            for (let px = 0; px <= canvas.width; px += 10) {
+                let worldXCoord = px + distance;
+                let gy = getGroundY(worldXCoord);
+                if (px === 0) ctx.moveTo(px, gy);
+                else ctx.lineTo(px, gy);
+            }
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.lineTo(0, canvas.height);
+            ctx.strokeStyle = "#e5e8e8";
+            ctx.lineWidth = 14;
+            ctx.stroke();
+
+            // 5. Xe Jeep Đỏ & Giỏ Trứng
+            car.y = getGroundY(screenX + distance);
+
             ctx.strokeStyle = "#17202a";
             ctx.lineWidth = 5;
             ctx.beginPath();
@@ -285,10 +297,11 @@ eggy_car_html = """
             drawWheel(screenX - 26, car.y + 16);
             drawWheel(screenX + 26, car.y + 16);
 
-            // 7. Quả Trứng (Hiển thị theo tọa độ thực tế trên màn hình)
+            // 7. Quả Trứng
             ctx.save();
             let eggScreenX = egg.isDropped ? (screenX + (egg.worldX - (screenX + distance))) : screenX;
-            ctx.translate(eggScreenX, car.y + egg.yOff);
+            let currentCarY = getGroundY(egg.isDropped ? egg.worldX : (screenX + distance));
+            ctx.translate(eggScreenX, currentCarY + egg.yOff);
             ctx.rotate(egg.angle);
 
             if (!gameOver) {
@@ -305,7 +318,7 @@ eggy_car_html = """
                 ctx.ellipse(-3, -7, 3, 5, -0.3, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // Trứng vỡ bẹp trên mặt đất
+                // Trứng vỡ bẹp trên đất
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
                 ctx.ellipse(0, 5, 14, 6, 0, 0, Math.PI * 2);
