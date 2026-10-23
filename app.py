@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Giữ Thăng Bằng Chuẩn Bản Gốc",
+    page_title="Eggy Car - Sửa Lỗi Rớt Trứng Đầu Game",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Giữ Thăng Bằng Trứng")
+st.title("🥚 Eggy Car - Sẵn Sàng Xuất Phát")
 st.markdown("""
 * **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trải (👈) / A** để lùi/phanh.
-* **Luật chơi**: Trứng nằm yên trong xe, chỉ khi bạn lái xe qua dốc làm mất thăng bằng khiến **trứng văng khỏi xe và rớt xuống đất** thì mới thua[cite: 1, 2]!
+* **Luật chơi**: Xe xuất phát an toàn trên đường phẳng, sau đó mới vào các đoạn dốc gồ ghề. Trứng rớt xuống đất mới thua[cite: 1, 2]!
 """)
 
 eggy_car_html = """
@@ -80,8 +80,7 @@ eggy_car_html = """
         let gameOver = false;
         let keys = {};
 
-        let car = { x: 150, y: 220, vx: 0, ax: 0.25, maxSpeed: 8.5, wheelAngle: 0 };
-        // Trứng nằm yên ban đầu trong xe
+        let car = { x: 150, y: 260, vx: 0, ax: 0.25, maxSpeed: 8.5, wheelAngle: 0 };
         let egg = { worldX: 150, yOff: -30, vx: 0, vy: 0, angle: 0, angularVel: 0, isDropped: false };
 
         document.addEventListener("keydown", (e) => {
@@ -124,9 +123,12 @@ eggy_car_html = """
             }
         });
 
-        // ĐỊA HÌNH: Có các đồi nhấp nhô mượt mà thử thách thăng bằng[cite: 2]
+        // ĐỊA HÌNH: Đoạn đầu (distance < 300) phẳng hoàn toàn để xe xuất phát ổn định, sau đó mới gặp đồi núi
         function getGroundY(x) {
-            return 260 + Math.sin(x * 0.007) * 35 + Math.sin(x * 0.02) * 12;
+            if (x < 450) {
+                return 260; // Đường phẳng an toàn lúc xuất phát
+            }
+            return 260 + Math.sin((x - 450) * 0.007) * 35 + Math.sin((x - 450) * 0.02) * 12;
         }
 
         function update() {
@@ -153,7 +155,7 @@ eggy_car_html = """
             car.y = getGroundY(currentCarWorldX);
 
             if (egg.isDropped) {
-                // Khi đã văng ra ngoài, trứng rơi tự do theo trọng lực xuống đất[cite: 2]
+                // Trứng rơi tự do xuống đất[cite: 2]
                 egg.vy += 0.5; 
                 egg.yOff += egg.vy;
                 egg.worldX += egg.vx;
@@ -161,7 +163,7 @@ eggy_car_html = """
 
                 let groundAtEgg = getGroundY(egg.worldX);
 
-                // CHỈ KHI TRỨNG RƠI CHẠM ĐẤT THÌ THUA THẬT SỰ[cite: 1, 2]
+                // Chạm đất mới tính là thua thực sự[cite: 1, 2]
                 if (car.y + egg.yOff >= groundAtEgg) {
                     gameOver = true;
                     playEggCrackSound();
@@ -169,14 +171,13 @@ eggy_car_html = """
             } else {
                 egg.worldX = currentCarWorldX;
                 
-                // Độ dốc và gia tốc làm trứng lắc lư khi mất thăng bằng
                 let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.07;
                 egg.angularVel += (-car.vx * 0.015) - slopeEffect; 
-                egg.angularVel -= egg.angle * 0.02; // Lực đàn hồi giữ trứng đứng thẳng
+                egg.angularVel -= egg.angle * 0.02; 
                 egg.angularVel *= 0.91; 
                 egg.angle += egg.angularVel;
 
-                // NẾU MẤT THĂNG BẰNG QUÁ ĐÀ (NGHIÊNG VƯỢT QUÁ GÓC 1.8), TRỨNG VĂNG KHỎI XE[cite: 2]
+                // Văng ra khỏi xe khi mất thăng bằng[cite: 2]
                 if (Math.abs(egg.angle) > 1.8) {
                     egg.isDropped = true;
                     egg.vy = -3.5; 
@@ -238,7 +239,6 @@ eggy_car_html = """
             ctx.fillStyle = "#c0392b"; 
             ctx.fill();
 
-            // Đường nhựa trắng xám phía trên[cite: 2]
             ctx.beginPath();
             for (let px = 0; px <= canvas.width; px += 10) {
                 let worldXCoord = px + distance;
@@ -252,7 +252,6 @@ eggy_car_html = """
             ctx.lineWidth = 14;
             ctx.stroke();
 
-            // Hạt đốm trên nền đất đỏ[cite: 2]
             ctx.fillStyle = "#962d22";
             for (let i = 20; i < canvas.width; i += 60) {
                 let shift = (distance * 10) % 60;
@@ -282,7 +281,6 @@ eggy_car_html = """
             ctx.arc(screenX + 38, car.y - 2, 4.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Hiển thị số mét trên xe[cite: 2]
             ctx.fillStyle = "#ffffff";
             ctx.font = "bold 15px Arial";
             ctx.textAlign = "center";
@@ -314,7 +312,6 @@ eggy_car_html = """
             ctx.rotate(egg.angle);
 
             if (!gameOver) {
-                // Thân trứng trắng
                 ctx.fillStyle = "#ffffff";
                 ctx.beginPath();
                 ctx.ellipse(0, 0, 13, 18, 0, 0, Math.PI * 2);
@@ -323,18 +320,15 @@ eggy_car_html = """
                 ctx.lineWidth = 1.5;
                 ctx.stroke();
 
-                // Mặt cười trên quả trứng[cite: 2]
                 ctx.fillStyle = "#2c3e50";
                 ctx.beginPath();
-                ctx.arc(-4, -3, 2, 0, Math.PI * 2); // Mắt trái
-                ctx.arc(4, -3, 2, 0, Math.PI * 2);  // Mắt phải
+                ctx.arc(-4, -3, 2, 0, Math.PI * 2); 
+                ctx.arc(4, -3, 2, 0, Math.PI * 2);  
                 ctx.fill();
-                // Miệng cười
                 ctx.beginPath();
                 ctx.arc(0, 2, 5, 0, Math.PI, false);
                 ctx.stroke();
             } else {
-                // Trứng vỡ bẹp trên đất khi rơi xuống
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
                 ctx.ellipse(0, 6, 14, 6, 0, 0, Math.PI * 2);
@@ -347,7 +341,7 @@ eggy_car_html = """
             }
             ctx.restore();
 
-            // 8. Màn hình Game Over "Get another chance"[cite: 1]
+            // 8. Màn hình Game Over[cite: 1]
             if (gameOver) {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -360,7 +354,6 @@ eggy_car_html = """
                 ctx.fillText("Get another chance", canvas.width / 2, 110);
                 ctx.shadowBlur = 0;
 
-                // Nút 1: WATCH AD TO RESUME[cite: 1]
                 ctx.fillStyle = "#f39c12";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 170, 220, 45, 22);
@@ -372,7 +365,6 @@ eggy_car_html = """
                 ctx.font = "bold 14px Arial";
                 ctx.fillText("📹 WATCH AD TO RESUME", canvas.width / 2, 198);
 
-                // Nút 2: REPLAY[cite: 1]
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 230, 220, 45, 22);
@@ -384,7 +376,6 @@ eggy_car_html = """
                 ctx.font = "bold 16px Arial";
                 ctx.fillText("🔄 REPLAY", canvas.width / 2, 258);
 
-                // Nút 3: HOME[cite: 1]
                 ctx.fillStyle = "#2ecc71";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 290, 220, 45, 22);
