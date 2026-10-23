@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Fast & Furious",
+    page_title="Eggy Car - Chỉ Thua Khi Trứng Chạm Đất",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Tốc Độ Cao & Vật Lý Rơi Trứng")
+st.title("🥚 Eggy Car - Rớt Trứng Xuống Đất Mới Thua")
 st.markdown("""
-* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến nhanh, **Mũi tên Trải (👈) / A** để lùi và phanh.
-* **Luật chơi mới**: Xe phóng cực nhanh, **chỉ khi quả trứng lật úp hoặc rơi xuống đất mới thua**!
+* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trải (👈) / A** để lùi.
+* **Luật chơi**: Quả trứng có thể văng khỏi xe, nhưng **phải rơi xuống chạm mặt đất** thì game mới kết thúc!
 """)
 
 eggy_car_html = """
@@ -80,9 +80,9 @@ eggy_car_html = """
         let gameOver = false;
         let keys = {};
 
-        // TĂNG TỐC ĐỘ XE: Tăng maxSpeed và gia tốc ax
         let car = { x: 150, y: 220, vx: 0, ax: 0.28, maxSpeed: 9.5, wheelAngle: 0 };
-        let egg = { x: 150, y: 175, angle: 0, angularVel: 0, py: 0, isFalling: false };
+        // egg.yOff là khoảng cách theo chiều dọc của trứng so với xe (âm là ở trên xe, dương là rơi xuống)
+        let egg = { x: 0, yOff: -32, vx: 0, vy: 0, angle: 0, angularVel: 0, isDropped: false };
 
         document.addEventListener("keydown", (e) => {
             initAudio();
@@ -96,10 +96,13 @@ eggy_car_html = """
             car.x = 150;
             car.vx = 0;
             car.wheelAngle = 0;
+            egg.x = 0;
+            egg.yOff = -32;
+            egg.vx = 0;
+            egg.vy = 0;
             egg.angle = 0;
             egg.angularVel = 0;
-            egg.py = 0;
-            egg.isFalling = false;
+            egg.isDropped = false;
         }
 
         // Tương tác bấm nút trên màn hình Game Over
@@ -110,7 +113,7 @@ eggy_car_html = """
 
             if (gameOver) {
                 if (mouseX >= canvas.width/2 - 100 && mouseX <= canvas.width/2 + 100 && mouseY >= 180 && mouseY <= 220) {
-                    resetGame(); // Resume / Chơi tiếp
+                    resetGame(); // Resume
                 }
                 else if (mouseX >= canvas.width/2 - 100 && mouseX <= canvas.width/2 + 100 && mouseY >= 235 && mouseY <= 275) {
                     resetGame(); // Replay
@@ -136,7 +139,7 @@ eggy_car_html = """
                 car.vx = Math.max(car.vx - car.ax, -car.maxSpeed / 1.5);
                 moving = true;
             } else {
-                car.vx *= 0.97; // Ma sát nhẹ để xe trớn xa hơn
+                car.vx *= 0.97;
             }
 
             if (moving) playEngineSound();
@@ -145,26 +148,36 @@ eggy_car_html = """
             car.wheelAngle += car.vx * 0.1;
 
             let groundY = getGroundY(200);
+            let screenX = 220;
+            car.y = groundY;
 
-            // Xử lý vật lý khi trứng rơi ra khỏi xe
-            if (egg.isFalling) {
-                egg.py += 6; // Tốc độ rơi xuống đất
-                egg.angle += 0.1; // Xoay vòng khi rơi
-                // Khi chạm mặt đường đất
-                if (car.y + egg.py >= groundY + 15) {
+            if (egg.isDropped) {
+                // Trứng rơi tự do theo trọng lực xuống đất
+                egg.vy += 0.5; // Gia tốc trọng trường
+                egg.yOff += egg.vy;
+                egg.x += egg.vx;
+                egg.angle += egg.angularVel;
+
+                // Tọa độ thực của mặt đất ngay tại vị trí quả trứng rơi xuống
+                let groundAtEggX = getGroundY(screenX + egg.x);
+
+                // Kiểm tra khi nào trứng chạm mặt đường/đất
+                if (car.y + egg.yOff >= groundAtEggX) {
                     gameOver = true;
                     playEggCrackSound();
                 }
             } else {
-                // Quán tính lắc lư của trứng trên xe (Tốc độ cao khiến trứng dễ văng hơn)
+                // Trứng nằm trên xe
                 egg.angularVel += (-car.vx * 0.018); 
                 egg.angularVel -= egg.angle * 0.015; 
                 egg.angularVel *= 0.93; 
                 egg.angle += egg.angularVel;
 
-                // CHỈ KHI TRỨNG NGHIÊNG QUÁ GÓC (LẬT ÚP) HOẶC RƠI KHỎI GIỎ THÌ MỚI BẮT ĐẦU RƠI XUỐNG ĐẤT
-                if (Math.abs(egg.angle) > 2.0) {
-                    egg.isFalling = true;
+                // NẾU XE BỊ LẬT HOẶC TRỨNG QUÁ ĐÀ (NGHIÊNG QUÁ GÓC 2.2) THÌ TRỨNG BỊ VĂNG RƠI KHỎI XE
+                if (Math.abs(egg.angle) > 2.2) {
+                    egg.isDropped = true;
+                    egg.vy = -2.0; // Bật nhẹ lên không trung rồi rơi
+                    egg.vx = -car.vx * 0.5; // Quán tính văng theo xe
                 }
             }
         }
@@ -276,7 +289,7 @@ eggy_car_html = """
 
             // 7. Quả Trứng
             ctx.save();
-            ctx.translate(screenX, car.y - 32 + egg.py);
+            ctx.translate(screenX + egg.x, car.y + egg.yOff);
             ctx.rotate(egg.angle);
 
             if (!gameOver) {
