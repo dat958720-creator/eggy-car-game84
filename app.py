@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Tốc Độ & Rớt Trứng",
+    page_title="Eggy Car - Từ Từ Rớt Trứng",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Thử Thách Tốc Độ")
+st.title("🥚 Eggy Car - Cân Bằng & Tốc Độ")
 st.markdown("""
 * **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tăng tốc, **Mũi tên Trải (👈) / A** để lùi/phanh.
-* **Luật chơi**: Xe phóng cực nhanh! Nhưng nếu **chạy quá nhanh qua dốc** trứng sẽ văng ra và rơi xuống đất là thua[cite: 1]!
+* **Luật chơi**: Xe chạy nhanh mạnh mẽ. Nếu bạn liên tục phóng bạt mạng qua dốc không giảm tốc, quả trứng sẽ **từ từ chao đảo, văng ra rồi rơi xuống đất** mới thua[cite: 1]!
 """)
 
 eggy_car_html = """
@@ -78,13 +78,14 @@ eggy_car_html = """
         // --- TRẠNG THÁI GAME ---
         let gameState = "MENU"; // MENU, PLAYING, GAMEOVER, VICTORY
         let currentLevel = 1;
-        let targetDistance = 100;
+        let targetDistance = 120;
         let distance = 0;
         let keys = {};
 
-        // Tăng tốc độ xe chạy cực nhanh (maxSpeed: 13.0)
+        // Xe chạy tốc độ cao
         let car = { x: 150, y: 260, vx: 0, ax: 0.45, maxSpeed: 13.0, wheelAngle: 0 };
-        let egg = { worldX: 150, yOff: -30, vx: 0, vy: 0, angle: 0, angularVel: 0, isDropped: false };
+        // Thêm biến instability (độ mất ổn định tích lũy dần)
+        let egg = { worldX: 150, yOff: -30, vx: 0, vy: 0, angle: 0, angularVel: 0, instability: 0, isDropped: false };
 
         document.addEventListener("keydown", (e) => {
             initAudio();
@@ -109,6 +110,7 @@ eggy_car_html = """
             egg.vy = 0;
             egg.angle = 0;
             egg.angularVel = 0;
+            egg.instability = 0;
             egg.isDropped = false;
         }
 
@@ -180,7 +182,6 @@ eggy_car_html = """
                 egg.angle += 0.15;
 
                 let groundAtEgg = getGroundY(egg.worldX);
-                // Trứng chạm đất -> Thua
                 if (car.y + egg.yOff >= groundAtEgg) {
                     gameState = "GAMEOVER";
                     playEggCrackSound();
@@ -188,20 +189,25 @@ eggy_car_html = """
             } else {
                 egg.worldX = currentCarWorldX;
                 
-                // Tốc độ càng cao, lực tác động lên trứng càng lớn (chạy nhanh quá qua dốc trứng sẽ văng)
-                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.09;
-                let speedFactor = Math.abs(car.vx) * 0.025; // Tốc độ ảnh hưởng trực tiếp đến độ lắc
+                let slopeEffect = Math.abs(getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5));
                 
-                egg.angularVel += (-car.vx * 0.018) - slopeEffect - (car.vx > 8 ? speedFactor : 0); 
-                egg.angularVel -= egg.angle * 0.04; 
+                // Cơ chế TỪ TỪ RỚT: Tích lũy độ mất ổn định khi xe chạy quá nhanh qua chỗ xóc
+                if (Math.abs(car.vx) > 9 && slopeEffect > 1.2) {
+                    egg.instability += 0.025; // Tăng dần độ chao đảo theo thời gian chịu xóc
+                } else {
+                    egg.instability = Math.max(0, egg.instability - 0.015); // Hồi phục dần nếu đi êm
+                }
+
+                egg.angularVel += (-car.vx * 0.01) + (Math.sin(Date.now() * 0.02) * egg.instability * 0.1); 
+                egg.angularVel -= egg.angle * 0.05; 
                 egg.angularVel *= 0.88; 
                 egg.angle += egg.angularVel;
 
-                // Nếu phóng quá nhanh hoặc mất thăng bằng, trứng văng ra khỏi xe[cite: 1]
-                if (Math.abs(egg.angle) > 1.6 || (Math.abs(car.vx) > 10 && Math.abs(slopeEffect) > 1.5)) {
+                // Khi độ mất ổn định tích lũy đủ lớn (chạy nhanh xóc nảy lâu), trứng mới văng ra từ từ
+                if (egg.instability > 1.5 || Math.abs(egg.angle) > 2.2) {
                     egg.isDropped = true;
-                    egg.vy = -4.0; 
-                    egg.vx = car.vx * 0.7; 
+                    egg.vy = -3.5; 
+                    egg.vx = car.vx * 0.6; 
                 }
             }
         }
