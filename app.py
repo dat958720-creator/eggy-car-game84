@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Nhiều Màn Chơi",
+    page_title="Eggy Car - Trứng Nằm Im Cố Định",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Hệ Thống Màn Chơi")
+st.title("🥚 Eggy Car - Giữ Trứng Cố Định Trong Xe")
 st.markdown("""
 * **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trải (👈) / A** để lùi/phanh.
-* **Luật chơi**: Chọn màn chơi, lái xe vượt dốc giữ trứng không rơi xuống đất. Đạt đủ số mét để qua màn!
+* **Luật chơi**: Quả trứng được giữ cố định rất chắc chắn trên xe, chỉ khi lật xe hoặc rơi xuống đất mới thua[cite: 1]!
 """)
 
 eggy_car_html = """
@@ -78,7 +78,7 @@ eggy_car_html = """
         // --- TRẠNG THÁI GAME ---
         let gameState = "MENU"; // MENU, PLAYING, GAMEOVER, VICTORY
         let currentLevel = 1;
-        let targetDistance = 100; // Mét cần đạt để thắng màn
+        let targetDistance = 100;
         let distance = 0;
         let keys = {};
 
@@ -111,61 +111,35 @@ eggy_car_html = """
             egg.isDropped = false;
         }
 
-        // Xử lý click chuột qua lại giữa các màn hình
         canvas.addEventListener("click", function(event) {
             const rect = canvas.getBoundingClientRect();
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
 
             if (gameState === "MENU") {
-                // Chọn Màn 1
-                if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 170 && mouseY <= 215) {
-                    startLevel(1);
-                }
-                // Chọn Màn 2
-                else if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 230 && mouseY <= 275) {
-                    startLevel(2);
-                }
-                // Chọn Màn 3
-                else if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 290 && mouseY <= 335) {
-                    startLevel(3);
-                }
+                if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 170 && mouseY <= 215) startLevel(1);
+                else if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 230 && mouseY <= 275) startLevel(2);
+                else if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 290 && mouseY <= 335) startLevel(3);
             } 
             else if (gameState === "GAMEOVER") {
-                // Nút Replay / Thử lại
-                if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 210 && mouseY <= 260) {
-                    startLevel(currentLevel);
-                }
-                // Nút Home / Về Menu
-                else if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 275 && mouseY <= 325) {
-                    gameState = "MENU";
-                }
+                if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 210 && mouseY <= 260) startLevel(currentLevel);
+                else if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 275 && mouseY <= 325) gameState = "MENU";
             }
             else if (gameState === "VICTORY") {
-                // Nút Màn Tiếp Theo hoặc Về Menu
                 if (mouseX >= canvas.width/2 - 110 && mouseX <= canvas.width/2 + 110 && mouseY >= 230 && mouseY <= 280) {
-                    if (currentLevel < 3) {
-                        startLevel(currentLevel + 1);
-                    } else {
-                        gameState = "MENU";
-                    }
+                    if (currentLevel < 3) startLevel(currentLevel + 1);
+                    else gameState = "MENU";
                 }
             }
         });
 
-        // ĐỊA HÌNH THEO TỪNG MÀN CHƠI
         function getGroundY(x) {
             let base = 260;
-            if (x < 350) return base; // Đoạn xuất phát phẳng an toàn
-
+            if (x < 350) return base;
             let progress = x - 350;
-            if (currentLevel === 1) {
-                return base + Math.sin(progress * 0.006) * 25; // Màn 1: Dốc nhẹ nhàng
-            } else if (currentLevel === 2) {
-                return base + Math.sin(progress * 0.008) * 35 + Math.sin(progress * 0.02) * 12; // Màn 2: Trung bình
-            } else {
-                return base + Math.sin(progress * 0.01) * 45 + Math.sin(progress * 0.03) * 18; // Màn 3: Khó & gồ ghề
-            }
+            if (currentLevel === 1) return base + Math.sin(progress * 0.006) * 20;
+            else if (currentLevel === 2) return base + Math.sin(progress * 0.008) * 30 + Math.sin(progress * 0.02) * 10;
+            else return base + Math.sin(progress * 0.01) * 40 + Math.sin(progress * 0.03) * 15;
         }
 
         function update() {
@@ -189,7 +163,6 @@ eggy_car_html = """
             if (car.vx > 0) distance += car.vx * 0.05;
             car.wheelAngle += car.vx * 0.1;
 
-            // Kiểm tra chiến thắng khi đạt đủ số mét
             if (distance >= targetDistance) {
                 gameState = "VICTORY";
                 return;
@@ -206,8 +179,6 @@ eggy_car_html = """
                 egg.angle += 0.1;
 
                 let groundAtEgg = getGroundY(egg.worldX);
-
-                // Trứng chạm đất -> Thua
                 if (car.y + egg.yOff >= groundAtEgg) {
                     gameState = "GAMEOVER";
                     playEggCrackSound();
@@ -215,17 +186,18 @@ eggy_car_html = """
             } else {
                 egg.worldX = currentCarWorldX;
                 
-                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.06;
-                egg.angularVel += (-car.vx * 0.015) - slopeEffect; 
-                egg.angularVel -= egg.angle * 0.03; 
-                egg.angularVel *= 0.9; 
+                // GIỮ TRỨNG CỐ ĐỊNH: Lực hồi vị rất mạnh, ép trứng luôn nằm thẳng đứng trong xe
+                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.03;
+                egg.angularVel += (-car.vx * 0.005) - slopeEffect; 
+                egg.angularVel -= egg.angle * 0.12; // Lực hút giữ thẳng cực mạnh
+                egg.angularVel *= 0.7; // Giảm xóc triệt để
                 egg.angle += egg.angularVel;
 
-                // Văng khỏi xe khi mất thăng bằng
-                if (Math.abs(egg.angle) > 1.9) {
+                // Chỉ khi xe lật úp hẳn (góc nghiêng > 2.6) trứng mới văng ra ngoài
+                if (Math.abs(egg.angle) > 2.6) {
                     egg.isDropped = true;
                     egg.vy = -3.5; 
-                    egg.vx = car.vx * 0.6; 
+                    egg.vx = car.vx * 0.5; 
                 }
             }
         }
@@ -316,7 +288,6 @@ eggy_car_html = """
             ctx.arc(screenX + 38, car.y - 2, 4.5, 0, Math.PI * 2);
             ctx.fill();
 
-            // Hiển thị tiến độ mét / mục tiêu
             if (gameState === "PLAYING") {
                 ctx.fillStyle = "#ffffff";
                 ctx.font = "bold 15px Arial";
@@ -342,7 +313,7 @@ eggy_car_html = """
             drawWheel(screenX - 26, car.y + 16);
             drawWheel(screenX + 26, car.y + 16);
 
-            // 7. Quả Trứng Có Mặt Cười
+            // 7. Quả Trứng Cố Định
             ctx.save();
             let eggScreenX = egg.isDropped ? (screenX + (egg.worldX - (screenX + distance))) : screenX;
             let currentCarY = getGroundY(egg.isDropped ? egg.worldX : (screenX + distance));
@@ -389,7 +360,6 @@ eggy_car_html = """
                 ctx.textAlign = "center";
                 ctx.fillText("CHỌN MÀN CHƠI", canvas.width / 2, 110);
 
-                // Nút Màn 1
                 ctx.fillStyle = "#3498db";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 170, 220, 45, 22);
@@ -398,7 +368,6 @@ eggy_car_html = """
                 ctx.fillStyle = "#fff"; ctx.font = "bold 16px Arial";
                 ctx.fillText("⭐ MÀN 1 (100m)", canvas.width / 2, 198);
 
-                // Nút Màn 2
                 ctx.fillStyle = "#f39c12";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 230, 220, 45, 22);
@@ -406,7 +375,6 @@ eggy_car_html = """
                 ctx.stroke();
                 ctx.fillText("⭐⭐ MÀN 2 (200m)", canvas.width / 2, 258);
 
-                // Nút Màn 3
                 ctx.fillStyle = "#e74c3c";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 290, 220, 45, 22);
@@ -415,7 +383,7 @@ eggy_car_html = """
                 ctx.fillText("⭐⭐⭐ MÀN 3 (300m)", canvas.width / 2, 318);
             }
 
-            // 9. MÀN HÌNH GAMEOVER (THUA)
+            // 9. MÀN HÌNH GAMEOVER
             if (gameState === "GAMEOVER") {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -425,7 +393,6 @@ eggy_car_html = """
                 ctx.textAlign = "center";
                 ctx.fillText("TRỨNG ĐÃ VỠ!", canvas.width / 2, 120);
 
-                // Nút Thử Lại
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 210, 220, 50, 25);
@@ -434,7 +401,6 @@ eggy_car_html = """
                 ctx.fillStyle = "#fff"; ctx.font = "bold 16px Arial";
                 ctx.fillText("🔄 THỬ LẠI", canvas.width / 2, 242);
 
-                // Nút Về Menu
                 ctx.fillStyle = "#2ecc71";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 275, 220, 50, 25);
@@ -443,7 +409,7 @@ eggy_car_html = """
                 ctx.fillText("🏠 CHỌN MÀN", canvas.width / 2, 307);
             }
 
-            // 10. MÀN HÌNH CHIẾN THẮNG (VICTORY)
+            // 10. MÀN HÌNH CHIẾN THẮNG
             if (gameState === "VICTORY") {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -457,7 +423,6 @@ eggy_car_html = """
                 ctx.font = "bold 18px Arial";
                 ctx.fillText("Bạn đã hoàn thành Màn " + currentLevel + " xuất sắc!", canvas.width / 2, 170);
 
-                // Nút Tiếp Tục / Menu
                 ctx.fillStyle = "#2ecc71";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 230, 220, 50, 25);
