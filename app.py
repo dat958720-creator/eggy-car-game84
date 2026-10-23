@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Dốc Gồ Ghề & Rơi Trứng",
+    page_title="Eggy Car - Dốc Gồ Ghề Thử Thách",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Đường Gồ Ghề Thử Thách Trứng")
+st.title("🥚 Eggy Car - Giữ Thăng Bằng Vượt Dốc")
 st.markdown("""
-* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tăng tốc, **Mũi tên Trải (👈) / A** để lùi/phanh.
-* **Luật chơi**: Địa hình gồ ghề nhấp nhô liên tục! Quả trứng nảy văng khỏi xe và **rơi xuống chạm đất mới thực sự thua**!
+* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trải (👈) / A** để lùi và phanh.
+* **Luật chơi**: Đường đi bình thường, nhưng sẽ có **một vài đoạn dốc gồ ghề**. Nếu không giữ thăng bằng để quả trứng văng ra khỏi xe là **thua ngay lập tức**!
 """)
 
 eggy_car_html = """
@@ -81,7 +81,7 @@ eggy_car_html = """
         let keys = {};
 
         let car = { x: 150, y: 220, vx: 0, ax: 0.28, maxSpeed: 9.5, wheelAngle: 0 };
-        let egg = { worldX: 150, yOff: -32, vx: 0, vy: 0, angle: 0, angularVel: 0, isDropped: false };
+        let egg = { x: 150, y: 175, angle: 0, angularVel: 0 };
 
         document.addEventListener("keydown", (e) => {
             initAudio();
@@ -95,13 +95,8 @@ eggy_car_html = """
             car.x = 150;
             car.vx = 0;
             car.wheelAngle = 0;
-            egg.worldX = 150;
-            egg.yOff = -32;
-            egg.vx = 0;
-            egg.vy = 0;
             egg.angle = 0;
             egg.angularVel = 0;
-            egg.isDropped = false;
         }
 
         // Tương tác bấm nút trên màn hình Game Over
@@ -123,9 +118,15 @@ eggy_car_html = """
             }
         });
 
-        // ĐỊA HÌNH GỒ GHỀ: Kết hợp nhiều hàm sóng sin với tần số khác nhau để tạo ra các đoạn dốc nhấp nhô, gồ ghề liên tục
+        // ĐỊA HÌNH: Chủ yếu phẳng, chỉ có môt ít đoạn gồ ghề (sóng sin lớn ngắt quãng theo quãng đường)
         function getGroundY(x) {
-            return 250 + Math.sin(x * 0.01) * 30 + Math.sin(x * 0.03) * 15 + Math.cos(x * 0.07) * 8;
+            let base = 250;
+            // Tạo các đoạn gồ ghề xuất hiện mỗi 400 mét và kéo dài trong khoảng ngắn
+            let bumpZone = Math.sin(x * 0.005);
+            if (bumpZone > 0.6) {
+                return base + Math.sin(x * 0.05) * 25; // Đoạn gồ ghề nhấp nhô mạnh
+            }
+            return base + Math.sin(x * 0.008) * 5; // Đoạn đường tương đối bằng phẳng
         }
 
         function update() {
@@ -149,39 +150,19 @@ eggy_car_html = """
 
             let screenX = 220;
             let currentCarWorldX = screenX + distance;
-            car.y = getGroundY(currentCarWorldX);
+            
+            // Tác động độ gồ ghề lên quán tính của trứng
+            let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.08;
+            
+            egg.angularVel += (-car.vx * 0.02) - slopeEffect; 
+            egg.angularVel -= egg.angle * 0.015; 
+            egg.angularVel *= 0.92; 
+            egg.angle += egg.angularVel;
 
-            if (egg.isDropped) {
-                // Trứng rơi tự do khi đã văng ra khỏi xe
-                egg.vy += 0.55; 
-                egg.yOff += egg.vy;
-                egg.worldX += egg.vx;
-                egg.angle += egg.angularVel;
-
-                let groundAtEgg = getGroundY(egg.worldX);
-
-                // CHỈ KHI TRỨNG RƠI CHẠM ĐẤT THÌ MỚI THUA
-                if (car.y + egg.yOff >= groundAtEgg) {
-                    gameOver = true;
-                    playEggCrackSound();
-                }
-            } else {
-                // Trứng nằm trên xe chịu tác động từ độ gồ ghề của dốc
-                egg.worldX = currentCarWorldX;
-                
-                // Độ gồ ghề của mặt đường làm trứng nảy lắc mạnh hơn
-                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.05;
-                egg.angularVel += (-car.vx * 0.022) - slopeEffect; 
-                egg.angularVel -= egg.angle * 0.012; 
-                egg.angularVel *= 0.92; 
-                egg.angle += egg.angularVel;
-
-                // KHI XE QUA DỐC GỒ GHỀ, TRỨNG BỊ NẢY VĂNG RA KHỎI XE
-                if (Math.abs(egg.angle) > 1.8) {
-                    egg.isDropped = true;
-                    egg.vy = -4.5; // Nảy văng mạnh lên không trung
-                    egg.vx = car.vx * 0.9; // Văng theo đà tốc độ của xe
-                }
+            // KHI KHÔNG GIỮ THĂNG BẰNG ĐƯỢC, TRỨNG VĂNG KHỎI XE LÀ THUA NGAY LẬP TỨC
+            if (Math.abs(egg.angle) > 1.6) {
+                gameOver = true;
+                playEggCrackSound();
             }
         }
 
@@ -226,7 +207,7 @@ eggy_car_html = """
             drawTree(300, 230);
             drawTree(580, 220);
 
-            // 4. Vẽ Mặt Đường Gồ Ghề & Lòng Đất chạy theo hàm getGroundY
+            // 4. Vẽ Mặt Đường Theo Hàm getGroundY
             let screenX = 220;
 
             ctx.beginPath();
@@ -240,7 +221,7 @@ eggy_car_html = """
             ctx.fillStyle = "#b03a2e"; // Đất đỏ bên dưới
             ctx.fill();
 
-            // Lớp đường nhựa phía trên gồ ghề
+            // Lớp đường nhựa phía trên
             ctx.beginPath();
             for (let px = 0; px <= canvas.width; px += 10) {
                 let worldXCoord = px + distance;
@@ -299,9 +280,7 @@ eggy_car_html = """
 
             // 7. Quả Trứng
             ctx.save();
-            let eggScreenX = egg.isDropped ? (screenX + (egg.worldX - (screenX + distance))) : screenX;
-            let currentCarY = getGroundY(egg.isDropped ? egg.worldX : (screenX + distance));
-            ctx.translate(eggScreenX, currentCarY + egg.yOff);
+            ctx.translate(screenX, car.y - 32);
             ctx.rotate(egg.angle);
 
             if (!gameOver) {
@@ -318,7 +297,7 @@ eggy_car_html = """
                 ctx.ellipse(-3, -7, 3, 5, -0.3, 0, Math.PI * 2);
                 ctx.fill();
             } else {
-                // Trứng vỡ bẹp trên đất
+                // Trứng vỡ tại chỗ khi văng khỏi xe
                 ctx.fillStyle = "#f1c40f";
                 ctx.beginPath();
                 ctx.ellipse(0, 5, 14, 6, 0, 0, Math.PI * 2);
