@@ -2,15 +2,15 @@ import streamlit as st
 import streamlit.components.v1 as components
 
 st.set_page_config(
-    page_title="Eggy Car - Trứng Nằm Im Cố Định",
+    page_title="Eggy Car - Tốc Độ & Rớt Trứng",
     page_icon="🥚",
     layout="centered"
 )
 
-st.title("🥚 Eggy Car - Giữ Trứng Cố Định Trong Xe")
+st.title("🥚 Eggy Car - Thử Thách Tốc Độ")
 st.markdown("""
-* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tiến, **Mũi tên Trải (👈) / A** để lùi/phanh.
-* **Luật chơi**: Quả trứng được giữ cố định rất chắc chắn trên xe, chỉ khi lật xe hoặc rơi xuống đất mới thua[cite: 1]!
+* **Điều khiển**: Dùng phím **Mũi tên Phải (👉) / D** để tăng tốc, **Mũi tên Trải (👈) / A** để lùi/phanh.
+* **Luật chơi**: Xe phóng cực nhanh! Nhưng nếu **chạy quá nhanh qua dốc** trứng sẽ văng ra và rơi xuống đất là thua[cite: 1]!
 """)
 
 eggy_car_html = """
@@ -47,8 +47,8 @@ eggy_car_html = """
                 let osc = audioCtx.createOscillator();
                 let gain = audioCtx.createGain();
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(65, audioCtx.currentTime);
-                osc.frequency.linearRampToValueAtTime(95, audioCtx.currentTime + 0.05);
+                osc.frequency.setValueAtTime(70, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.05);
                 gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
                 osc.connect(gain);
@@ -82,7 +82,8 @@ eggy_car_html = """
         let distance = 0;
         let keys = {};
 
-        let car = { x: 150, y: 260, vx: 0, ax: 0.3, maxSpeed: 9.5, wheelAngle: 0 };
+        // Tăng tốc độ xe chạy cực nhanh (maxSpeed: 13.0)
+        let car = { x: 150, y: 260, vx: 0, ax: 0.45, maxSpeed: 13.0, wheelAngle: 0 };
         let egg = { worldX: 150, yOff: -30, vx: 0, vy: 0, angle: 0, angularVel: 0, isDropped: false };
 
         document.addEventListener("keydown", (e) => {
@@ -93,9 +94,9 @@ eggy_car_html = """
 
         function startLevel(level) {
             currentLevel = level;
-            if (level === 1) targetDistance = 100;
-            else if (level === 2) targetDistance = 200;
-            else if (level === 3) targetDistance = 300;
+            if (level === 1) targetDistance = 120;
+            else if (level === 2) targetDistance = 220;
+            else if (level === 3) targetDistance = 350;
 
             distance = 0;
             gameState = "PLAYING";
@@ -137,16 +138,16 @@ eggy_car_html = """
             let base = 260;
             if (x < 350) return base;
             let progress = x - 350;
-            if (currentLevel === 1) return base + Math.sin(progress * 0.006) * 20;
-            else if (currentLevel === 2) return base + Math.sin(progress * 0.008) * 30 + Math.sin(progress * 0.02) * 10;
-            else return base + Math.sin(progress * 0.01) * 40 + Math.sin(progress * 0.03) * 15;
+            if (currentLevel === 1) return base + Math.sin(progress * 0.006) * 22;
+            else if (currentLevel === 2) return base + Math.sin(progress * 0.008) * 32 + Math.sin(progress * 0.02) * 12;
+            else return base + Math.sin(progress * 0.01) * 42 + Math.sin(progress * 0.03) * 16;
         }
 
         function update() {
             if (gameState !== "PLAYING") return;
 
             let moving = false;
-            let currentMaxSpeed = car.maxSpeed + (currentLevel - 1) * 1.0;
+            let currentMaxSpeed = car.maxSpeed + (currentLevel - 1) * 1.5;
 
             if (keys["ArrowRight"] || keys["d"] || keys["D"]) {
                 car.vx = Math.min(car.vx + car.ax, currentMaxSpeed);
@@ -173,12 +174,13 @@ eggy_car_html = """
             car.y = getGroundY(currentCarWorldX);
 
             if (egg.isDropped) {
-                egg.vy += 0.5; 
+                egg.vy += 0.55; 
                 egg.yOff += egg.vy;
                 egg.worldX += egg.vx;
-                egg.angle += 0.1;
+                egg.angle += 0.15;
 
                 let groundAtEgg = getGroundY(egg.worldX);
+                // Trứng chạm đất -> Thua
                 if (car.y + egg.yOff >= groundAtEgg) {
                     gameState = "GAMEOVER";
                     playEggCrackSound();
@@ -186,18 +188,20 @@ eggy_car_html = """
             } else {
                 egg.worldX = currentCarWorldX;
                 
-                // GIỮ TRỨNG CỐ ĐỊNH: Lực hồi vị rất mạnh, ép trứng luôn nằm thẳng đứng trong xe
-                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.03;
-                egg.angularVel += (-car.vx * 0.005) - slopeEffect; 
-                egg.angularVel -= egg.angle * 0.12; // Lực hút giữ thẳng cực mạnh
-                egg.angularVel *= 0.7; // Giảm xóc triệt để
+                // Tốc độ càng cao, lực tác động lên trứng càng lớn (chạy nhanh quá qua dốc trứng sẽ văng)
+                let slopeEffect = (getGroundY(currentCarWorldX + 5) - getGroundY(currentCarWorldX - 5)) * 0.09;
+                let speedFactor = Math.abs(car.vx) * 0.025; // Tốc độ ảnh hưởng trực tiếp đến độ lắc
+                
+                egg.angularVel += (-car.vx * 0.018) - slopeEffect - (car.vx > 8 ? speedFactor : 0); 
+                egg.angularVel -= egg.angle * 0.04; 
+                egg.angularVel *= 0.88; 
                 egg.angle += egg.angularVel;
 
-                // Chỉ khi xe lật úp hẳn (góc nghiêng > 2.6) trứng mới văng ra ngoài
-                if (Math.abs(egg.angle) > 2.6) {
+                // Nếu phóng quá nhanh hoặc mất thăng bằng, trứng văng ra khỏi xe[cite: 1]
+                if (Math.abs(egg.angle) > 1.6 || (Math.abs(car.vx) > 10 && Math.abs(slopeEffect) > 1.5)) {
                     egg.isDropped = true;
-                    egg.vy = -3.5; 
-                    egg.vx = car.vx * 0.5; 
+                    egg.vy = -4.0; 
+                    egg.vx = car.vx * 0.7; 
                 }
             }
         }
@@ -313,7 +317,7 @@ eggy_car_html = """
             drawWheel(screenX - 26, car.y + 16);
             drawWheel(screenX + 26, car.y + 16);
 
-            // 7. Quả Trứng Cố Định
+            // 7. Quả Trứng Có Mặt Cười
             ctx.save();
             let eggScreenX = egg.isDropped ? (screenX + (egg.worldX - (screenX + distance))) : screenX;
             let currentCarY = getGroundY(egg.isDropped ? egg.worldX : (screenX + distance));
@@ -350,7 +354,7 @@ eggy_car_html = """
             }
             ctx.restore();
 
-            // 8. MÀN HÌNH CHỌN MÀN (MENU)
+            // 8. MÀN HÌNH MENU
             if (gameState === "MENU") {
                 ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -366,21 +370,21 @@ eggy_car_html = """
                 ctx.fill();
                 ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.stroke();
                 ctx.fillStyle = "#fff"; ctx.font = "bold 16px Arial";
-                ctx.fillText("⭐ MÀN 1 (100m)", canvas.width / 2, 198);
+                ctx.fillText("⭐ MÀN 1 (120m)", canvas.width / 2, 198);
 
                 ctx.fillStyle = "#f39c12";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 230, 220, 45, 22);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillText("⭐⭐ MÀN 2 (200m)", canvas.width / 2, 258);
+                ctx.fillText("⭐⭐ MÀN 2 (220m)", canvas.width / 2, 258);
 
                 ctx.fillStyle = "#e74c3c";
                 ctx.beginPath();
                 ctx.roundRect(canvas.width/2 - 110, 290, 220, 45, 22);
                 ctx.fill();
                 ctx.stroke();
-                ctx.fillText("⭐⭐⭐ MÀN 3 (300m)", canvas.width / 2, 318);
+                ctx.fillText("⭐⭐⭐ MÀN 3 (350m)", canvas.width / 2, 318);
             }
 
             // 9. MÀN HÌNH GAMEOVER
